@@ -1,4 +1,6 @@
 
+exception Error of string
+
 module Simple : sig
 
 type t =
