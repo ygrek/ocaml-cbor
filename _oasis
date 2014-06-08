@@ -21,10 +21,10 @@ Executable test
   Custom: true
   CompiledObject: best
   MainIs: test.ml
-  BuildDepends: cbor, oUnit
+  BuildDepends: cbor, yojson
 
 Test main
-  Command: $test
+  Command: $test test/appendix_a.json
   TestTools: test
 
 Document api

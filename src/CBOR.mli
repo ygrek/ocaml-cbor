@@ -14,4 +14,6 @@ type t =
 val encode : t -> string
 val decode : string -> t
 
+val to_diagnostic : t -> string
+
 end

@@ -1,12 +1,13 @@
 (** CBOR encoder/decoder, RFC 7049 *)
 
+open Printf
 module BE = EndianBytes.BigEndian_unsafe
 
 exception Error of string
 
 let (@@) f x = f x
-let (>>) x f = f x
-let fail fmt = Printf.ksprintf (fun s -> raise (Error s)) fmt
+let (|>) x f = f x
+let fail fmt = ksprintf (fun s -> raise (Error s)) fmt
 
 module Encode = struct
 
@@ -34,6 +35,19 @@ let put b ~maj n =
 let int b n =
   let (maj,n) = if n < 0 then 1, -1 - n else 0, n in
   put b ~maj n
+
+let hex_char x =
+  assert (x >= 0 && x < 16);
+  if x <= 9 then Char.chr @@ Char.code '0' + x
+  else Char.chr @@ Char.code 'a' + x - 10
+
+let to_hex s =
+  let r = Bytes.create (String.length s * 2) in
+  for i = 0 to String.length s - 1 do
+    r.[i*2] <- hex_char @@ Char.code s.[i] lsr 4;
+    r.[i*2+1] <- hex_char @@ Char.code s.[i] land 0b1111;
+  done;
+  Bytes.to_string r
 
 end
 
@@ -71,8 +85,10 @@ let get_byte (s,_ as r) = int_of_char @@ s.[need r 1]
 let get_n (s,_ as r) n f = f s @@ need r n
 let get_s (s,_ as r) n = String.sub s (need r n) n
 
+let get_additional byte1 = byte1 land 0b11111
+
 let extract_number byte1 r =
-  match byte1 land 0b11111 with
+  match get_additional byte1 with
   | n when n < 24 -> n
   | 24 -> get_byte r
   | 25 -> get_n r 2 BE.get_int16
@@ -96,5 +112,23 @@ let decode s =
   let x = extract (s,i) in
   if !i <> String.length s then fail "extra data: len %d pos %d" (String.length s) !i;
   x
+
+let to_diagnostic item =
+  let b = Buffer.create 10 in
+  let rec write = function
+  | `Int n -> bprintf b "%d" n
+  | `Bytes s -> bprintf b "h'%s'" (Encode.to_hex s)
+  | `Text s -> bprintf b "'%s'" s
+  | `Array l ->
+    bprintf b "[";
+    l |> List.iteri (fun i x -> if i <> 0 then bprintf b ", "; write x);
+    bprintf b "]"
+  | `Map m ->
+    bprintf b "{";
+    m |> List.iteri (fun i (k,v) -> if i <> 0 then bprintf b ", "; write k; bprintf b ": "; write v);
+    bprintf b "}"
+  in
+  write item;
+  Buffer.contents b
 
 end (* Simple *)
