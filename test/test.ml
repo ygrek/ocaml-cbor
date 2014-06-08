@@ -41,7 +41,8 @@ let read file =
     end
 
 let rec json_of_cbor : CBOR.Simple.t -> Yojson.Basic.json = function
-| `Int _ as x -> x
+| (`Null | `Bool _ | `Int _ | `Float _ as x) -> x
+| `Undefined | `Simple _ -> `Null
 | `Bytes x -> `String x
 | `Text x -> `String x
 | `Array x -> `List (List.map json_of_cbor x)

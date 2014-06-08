@@ -4,7 +4,12 @@ exception Error of string
 module Simple : sig
 
 type t =
-[ `Int of int
+[ `Null
+| `Undefined
+| `Simple of int
+| `Bool of bool
+| `Int of int
+| `Float of float
 | `Bytes of string
 | `Text of string
 | `Array of t list

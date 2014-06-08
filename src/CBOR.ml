@@ -18,6 +18,11 @@ let init b ~maj add =
   assert (add >= 0 && add < 32);
   Buffer.add_char b @@ char_of_int @@ (maj lsl 5) lor add
 
+let put_n b n f x =
+  let s = Bytes.create n in
+  f s 0 x;
+  Buffer.add_string b s
+
 let put b ~maj n =
   assert (n >= 0);
   if n < 24 then
@@ -25,12 +30,12 @@ let put b ~maj n =
   else if n < 256 then
     begin init b ~maj 24; Buffer.add_char b @@ char_of_int n end
   else if n < 65536 then
-    begin init b ~maj 25; let s = Bytes.create 2 in BE.set_int16 s 0 n; Buffer.add_string b s end
+    begin init b ~maj 25; put_n b 2 BE.set_int16 n end
   else if n < 4294967296 then (* optcomp int32 *)
-    begin init b ~maj 26; let s = Bytes.create 4 in BE.set_int32 s 0 @@ Int32.of_int n; Buffer.add_string b s end
+    begin init b ~maj 26; put_n b 4 BE.set_int32 @@ Int32.of_int n end
   else
     (* FIXME max int64 check *)
-    begin init b ~maj 27; let s = Bytes.create 8 in BE.set_int64 s 0 @@ Int64.of_int n; Buffer.add_string b s end
+    begin init b ~maj 27; put_n b 8 BE.set_int64 @@ Int64.of_int n end
 
 let int b n =
   let (maj,n) = if n < 0 then 1, -1 - n else 0, n in
@@ -54,7 +59,12 @@ end
 module Simple = struct
 
 type t =
-[ `Int of int
+[ `Null
+| `Undefined
+| `Simple of int
+| `Bool of bool
+| `Int of int
+| `Float of float
 | `Bytes of string
 | `Text of string
 | `Array of t list
@@ -65,7 +75,14 @@ let encode item =
   let open Encode in
   let b = start () in
   let rec write = function
+  | `Null -> put b ~maj:7 22;
+  | `Undefined -> put b ~maj:7 23;
+  | `Bool false -> put b ~maj:7 20;
+  | `Bool true -> put b ~maj:7 21;
+  | `Simple n when (n >= 0 && n <= 23) || (n >= 32 && n <= 255) -> put b ~maj:7 n
+  | `Simple n -> fail "encode: simple(%d)" n
   | `Int n -> int b n
+  | `Float f -> put b ~maj:7 27; put_n b 8 BE.set_double f
   | `Bytes s -> put b ~maj:2 (String.length s); Buffer.add_string b s
   | `Text s -> put b ~maj:3 (String.length s); Buffer.add_string b s
   | `Array l -> put b ~maj:4 (List.length l); List.iter write l
@@ -105,6 +122,19 @@ let rec extract r =
   | 3 -> let n = extract_number byte1 r in `Text (get_s r n)
   | 4 -> let n = extract_number byte1 r in `Array (Array.to_list @@ Array.init n (fun _ -> extract r))
   | 5 -> let n = extract_number byte1 r in `Map (Array.to_list @@ Array.init n (fun _ -> let a = extract r in let b = extract r in a,b))
+  | 7 ->
+    begin match get_additional byte1 with
+    | n when n < 20 -> `Simple n
+    | 20 -> `Bool false
+    | 21 -> `Bool true
+    | 22 -> `Null
+    | 23 -> `Undefined
+    | 24 -> `Simple (get_byte r)
+    | 25 -> fail "FIXME float16"
+    | 26 -> `Float (get_n r 4 BE.get_float)
+    | 27 -> `Float (get_n r 8 BE.get_double)
+    | a -> fail "FIXME (7,%d)" a
+    end
   | n -> fail "FIXME major %d" n
 
 let decode s =
@@ -116,7 +146,18 @@ let decode s =
 let to_diagnostic item =
   let b = Buffer.create 10 in
   let rec write = function
+  | `Null -> bprintf b "null"
+  | `Bool false -> bprintf b "false"
+  | `Bool true -> bprintf b "true"
+  | `Simple n -> bprintf b "simple(%d)" n
+  | `Undefined -> bprintf b "undefined"
   | `Int n -> bprintf b "%d" n
+  | `Float f ->
+    begin match classify_float f with
+    | FP_nan -> bprintf b "NaN"
+    | FP_infinite -> bprintf b (if f < 0. then "-Infinity" else "Infinity")
+    | FP_zero | FP_normal | FP_subnormal -> bprintf b "%g" f
+    end
   | `Bytes s -> bprintf b "h'%s'" (Encode.to_hex s)
   | `Text s -> bprintf b "'%s'" s
   | `Array l ->
