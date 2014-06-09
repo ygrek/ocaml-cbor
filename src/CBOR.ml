@@ -34,7 +34,6 @@ let put b ~maj n =
   else if n < 4294967296 then (* optcomp int32 *)
     begin init b ~maj 26; put_n b 4 BE.set_int32 @@ Int32.of_int n end
   else
-    (* FIXME max int64 check *)
     begin init b ~maj 27; put_n b 8 BE.set_int64 @@ Int64.of_int n end
 
 let int b n =
@@ -105,13 +104,18 @@ let get_s (s,_ as r) n = String.sub s (need r n) n
 let get_additional byte1 = byte1 land 0b11111
 let is_indefinite byte1 = get_additional byte1 = 31
 
+let int64_max_int = Int64.of_int max_int
+
 let extract_number byte1 r =
   match get_additional byte1 with
   | n when n < 24 -> n
   | 24 -> get_byte r
   | 25 -> get_n r 2 BE.get_int16
   | 26 -> Int32.to_int @@ get_n r 4 BE.get_int32
-  | 27 -> Int64.to_int @@ get_n r 8 BE.get_int64
+  | 27 ->
+    let n = get_n r 8 BE.get_int64 in
+    if n > int64_max_int || n < 0L then fail "extract_number: %Lu" n;
+    Int64.to_int n
   | n -> fail "bad additional %d" n
 
 exception Break
@@ -142,7 +146,7 @@ and extract r =
   | 3 -> `Text (extract_string byte1 r (function `Text s -> s | _ -> fail "extract: not a text chunk"))
   | 4 -> `Array (extract_list byte1 r extract)
   | 5 -> `Map (extract_list byte1 r extract_pair)
-  | 6 -> fail "FIXME major 6"
+  | 6 -> let _tag = extract_number byte1 r in extract r
   | 7 ->
     begin match get_additional byte1 with
     | n when n < 20 -> `Simple n
@@ -181,7 +185,7 @@ let to_diagnostic item =
     | FP_zero | FP_normal | FP_subnormal -> bprintf b "%g" f
     end
   | `Bytes s -> bprintf b "h'%s'" (Encode.to_hex s)
-  | `Text s -> bprintf b "'%s'" s
+  | `Text s -> bprintf b "\"%s\"" s
   | `Array l ->
     bprintf b "[";
     l |> List.iteri (fun i x -> if i <> 0 then bprintf b ", "; write x);

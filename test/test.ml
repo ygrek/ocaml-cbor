@@ -59,23 +59,27 @@ let () =
     eprintfn "I: total tests = %d" (List.length tests);
     let ok = ref 0 in
     let failed = ref 0 in
+    let ignored = ref 0 in
     tests |> List.iteri begin fun i test ->
       try
         let cbor = CBOR.Simple.decode test.cbor in
+        let diag = CBOR.Simple.to_diagnostic cbor in
         let () = match test.result with
         | Diagnostic s ->
-          let s' = CBOR.Simple.to_diagnostic cbor in
-          if s <> s' then fail "expected %S, got %S" s s'
+          if s <> diag then fail "expected %s, got %s" s diag
         | Decoded json ->
           let json' = json_of_cbor cbor in
-          if json <> json' then fail "expected %s, got %s" (Yojson.Basic.to_string json) (Yojson.Basic.to_string json')
+          if json <> json' then fail "expected %s, got %s, aka %s"
+            (Yojson.Basic.to_string json) (Yojson.Basic.to_string json') diag
         in
         incr ok
       with exn ->
-        eprintfn "E: test %d: %s" i (Printexc.to_string exn);
-        incr failed
+        let ignore = match i with 10 | 11 | 12 | 13 | 71 -> true | _ -> false in
+        eprintfn "%s test %d: %s"
+          (if ignore then "W: ignoring" else "E:") i (match exn with Failure s -> s | _ -> Printexc.to_string exn);
+        incr (if ignore then ignored else failed)
     end;
-    eprintfn "I: finished. tests ok = %d failed = %d" !ok !failed;
+    eprintfn "I: finished. tests ok = %d failed = %d ignored = %d" !ok !failed !ignored;
     exit (if !ok = List.length tests then 0 else 1)
   | _ ->
     eprintfn "E: no test file given";
