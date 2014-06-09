@@ -103,6 +103,7 @@ let get_n (s,_ as r) n f = f s @@ need r n
 let get_s (s,_ as r) n = String.sub s (need r n) n
 
 let get_additional byte1 = byte1 land 0b11111
+let is_indefinite byte1 = get_additional byte1 = 31
 
 let extract_number byte1 r =
   match get_additional byte1 with
@@ -113,15 +114,35 @@ let extract_number byte1 r =
   | 27 -> Int64.to_int @@ get_n r 8 BE.get_int64
   | n -> fail "bad additional %d" n
 
-let rec extract r =
+exception Break
+
+let extract_list byte1 r f =
+  if is_indefinite byte1 then
+    let l = ref [] in
+    try while true do l := f r :: !l done; assert false with Break -> List.rev !l
+  else
+    let n = extract_number byte1 r in Array.to_list @@ Array.init n (fun _ -> f r)
+
+let rec extract_pair r =
+  let a = extract r in
+  let b = try extract r with Break -> fail "extract_pair: unexpected break" in
+  a,b
+and extract_string byte1 r f =
+  if is_indefinite byte1 then
+    let b = Buffer.create 10 in
+    try while true do Buffer.add_string b (f @@ extract r) done; assert false with Break -> Buffer.contents b
+  else
+    let n = extract_number byte1 r in get_s r n
+and extract r =
   let byte1 = get_byte r in
   match byte1 lsr 5 with
   | 0 -> `Int (extract_number byte1 r)
   | 1 -> `Int (-1 - extract_number byte1 r)
-  | 2 -> let n = extract_number byte1 r in `Bytes (get_s r n)
-  | 3 -> let n = extract_number byte1 r in `Text (get_s r n)
-  | 4 -> let n = extract_number byte1 r in `Array (Array.to_list @@ Array.init n (fun _ -> extract r))
-  | 5 -> let n = extract_number byte1 r in `Map (Array.to_list @@ Array.init n (fun _ -> let a = extract r in let b = extract r in a,b))
+  | 2 -> `Bytes (extract_string byte1 r (function `Bytes s -> s | _ -> fail "extract: not a bytes chunk"))
+  | 3 -> `Text (extract_string byte1 r (function `Text s -> s | _ -> fail "extract: not a text chunk"))
+  | 4 -> `Array (extract_list byte1 r extract)
+  | 5 -> `Map (extract_list byte1 r extract_pair)
+  | 6 -> fail "FIXME major 6"
   | 7 ->
     begin match get_additional byte1 with
     | n when n < 20 -> `Simple n
@@ -133,14 +154,15 @@ let rec extract r =
     | 25 -> fail "FIXME float16"
     | 26 -> `Float (get_n r 4 BE.get_float)
     | 27 -> `Float (get_n r 8 BE.get_double)
-    | a -> fail "FIXME (7,%d)" a
+    | 31 -> raise Break
+    | a -> fail "extract: (7,%d)" a
     end
-  | n -> fail "FIXME major %d" n
+  | _ -> assert false
 
 let decode s =
   let i = ref 0 in
-  let x = extract (s,i) in
-  if !i <> String.length s then fail "extra data: len %d pos %d" (String.length s) !i;
+  let x = try extract (s,i) with Break -> fail "decode: unexpected break" in
+  if !i <> String.length s then fail "decode: extra data: len %d pos %d" (String.length s) !i;
   x
 
 let to_diagnostic item =
