@@ -118,6 +118,18 @@ let extract_number byte1 r =
     Int64.to_int n
   | n -> fail "bad additional %d" n
 
+let get_float16 s i =
+  let half = Char.code s.[i] lsl 8 + Char.code s.[i+1] in
+  let mant = half land 0x3ff in
+  let value =
+    match (half lsr 10) land 0x1f with (* exp *)
+    | 31 when mant = 0 -> infinity
+    | 31 -> nan
+    | 0 -> ldexp (float mant) ~-24
+    | exp -> ldexp (float @@ mant + 1024) (exp - 25)
+  in
+  if half land 0x8000 = 0 then value else ~-. value
+
 exception Break
 
 let extract_list byte1 r f =
@@ -155,7 +167,7 @@ and extract r =
     | 22 -> `Null
     | 23 -> `Undefined
     | 24 -> `Simple (get_byte r)
-    | 25 -> fail "FIXME float16"
+    | 25 -> `Float (get_n r 2 get_float16)
     | 26 -> `Float (get_n r 4 BE.get_float)
     | 27 -> `Float (get_n r 8 BE.get_double)
     | 31 -> raise Break
