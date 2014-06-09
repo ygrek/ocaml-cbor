@@ -1,3 +1,4 @@
+(** CBOR encoder/decoder, RFC 7049 *)
 
 exception Error of string
 

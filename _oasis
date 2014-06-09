@@ -1,7 +1,7 @@
 OASISFormat:  0.4
 Name:         cbor
 Version:      0.1
-License:      LGPL-2.1 with OCaml linking exception
+License:      MIT
 Authors:      ygrek
 Copyrights:   (C) 2014 ygrek
 BuildTools:   ocamlbuild
