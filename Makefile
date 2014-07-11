@@ -39,3 +39,12 @@ configure:
 .PHONY: build doc test all install uninstall reinstall clean distclean configure
 
 # OASIS_STOP
+
+VERSION=$(shell oasis query version)
+NAME=ocaml-cbor-$(VERSION)
+
+.PHONY: release
+release:
+	#git tag -a -m $(VERSION) $(VERSION)
+	git archive --prefix=$(NAME)/ $(VERSION) | gzip > $(NAME).tar.gz
+	gpg -a -b $(NAME).tar.gz
