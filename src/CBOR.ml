@@ -7,6 +7,7 @@ exception Error of string
 
 let (@@) f x = f x
 let (|>) x f = f x
+let list_iteri f l = let i = ref 0 in List.iter (fun x -> f !i x; incr i) l
 let fail fmt = ksprintf (fun s -> raise (Error s)) fmt
 
 module Encode = struct
@@ -183,29 +184,30 @@ let decode s =
 
 let to_diagnostic item =
   let b = Buffer.create 10 in
+  let put = Buffer.add_string b in
   let rec write = function
-  | `Null -> bprintf b "null"
-  | `Bool false -> bprintf b "false"
-  | `Bool true -> bprintf b "true"
+  | `Null -> put "null"
+  | `Bool false -> put "false"
+  | `Bool true -> put "true"
   | `Simple n -> bprintf b "simple(%d)" n
-  | `Undefined -> bprintf b "undefined"
+  | `Undefined -> put "undefined"
   | `Int n -> bprintf b "%d" n
   | `Float f ->
     begin match classify_float f with
-    | FP_nan -> bprintf b "NaN"
-    | FP_infinite -> bprintf b (if f < 0. then "-Infinity" else "Infinity")
+    | FP_nan -> put "NaN"
+    | FP_infinite -> put (if f < 0. then "-Infinity" else "Infinity")
     | FP_zero | FP_normal | FP_subnormal -> bprintf b "%g" f
     end
   | `Bytes s -> bprintf b "h'%s'" (Encode.to_hex s)
   | `Text s -> bprintf b "\"%s\"" s
   | `Array l ->
-    bprintf b "[";
-    l |> List.iteri (fun i x -> if i <> 0 then bprintf b ", "; write x);
-    bprintf b "]"
+    put "[";
+    l |> list_iteri (fun i x -> if i <> 0 then put ", "; write x);
+    put "]"
   | `Map m ->
-    bprintf b "{";
-    m |> List.iteri (fun i (k,v) -> if i <> 0 then bprintf b ", "; write k; bprintf b ": "; write v);
-    bprintf b "}"
+    put "{";
+    m |> list_iteri (fun i (k,v) -> if i <> 0 then put ", "; write k; put ": "; write v);
+    put "}"
   in
   write item;
   Buffer.contents b
