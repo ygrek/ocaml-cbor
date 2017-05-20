@@ -82,7 +82,7 @@ let encode item =
   | `Simple n when (n >= 0 && n <= 23) || (n >= 32 && n <= 255) -> put b ~maj:7 n
   | `Simple n -> fail "encode: simple(%d)" n
   | `Int n -> int b n
-  | `Float f -> put b ~maj:7 27; put_n b 8 BE.set_double f
+  | `Float f -> init b ~maj:7 27; put_n b 8 BE.set_double f
   | `Bytes s -> put b ~maj:2 (String.length s); Buffer.add_string b s
   | `Text s -> put b ~maj:3 (String.length s); Buffer.add_string b s
   | `Array l -> put b ~maj:4 (List.length l); List.iter write l
