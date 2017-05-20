@@ -106,13 +106,16 @@ let get_additional byte1 = byte1 land 0b11111
 let is_indefinite byte1 = get_additional byte1 = 31
 
 let int64_max_int = Int64.of_int max_int
+let two_min_int32 = 2 * Int32.to_int Int32.min_int
 
 let extract_number byte1 r =
   match get_additional byte1 with
   | n when n < 24 -> n
   | 24 -> get_byte r
-  | 25 -> get_n r 2 BE.get_int16
-  | 26 -> Int32.to_int @@ get_n r 4 BE.get_int32
+  | 25 -> get_n r 2 BE.get_uint16
+  | 26 ->
+    let n = Int32.to_int @@ get_n r 4 BE.get_int32 in
+    if n < 0 then n - two_min_int32 else n
   | 27 ->
     let n = get_n r 8 BE.get_int64 in
     if n > int64_max_int || n < 0L then fail "extract_number: %Lu" n;
