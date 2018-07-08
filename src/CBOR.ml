@@ -2,6 +2,7 @@
 
 open Printf
 module BE = EndianBytes.BigEndian_unsafe
+module SE = EndianString.BigEndian_unsafe
 
 exception Error of string
 
@@ -22,7 +23,7 @@ let init b ~maj add =
 let put_n b n f x =
   let s = Bytes.create n in
   f s 0 x;
-  Buffer.add_string b s
+  Buffer.add_string b (Bytes.unsafe_to_string s)
 
 let put b ~maj n =
   assert (n >= 0);
@@ -112,12 +113,12 @@ let extract_number byte1 r =
   match get_additional byte1 with
   | n when n < 24 -> n
   | 24 -> get_byte r
-  | 25 -> get_n r 2 BE.get_uint16
+  | 25 -> get_n r 2 SE.get_uint16
   | 26 ->
-    let n = Int32.to_int @@ get_n r 4 BE.get_int32 in
+    let n = Int32.to_int @@ get_n r 4 SE.get_int32 in
     if n < 0 then n - two_min_int32 else n
   | 27 ->
-    let n = get_n r 8 BE.get_int64 in
+    let n = get_n r 8 SE.get_int64 in
     if n > int64_max_int || n < 0L then fail "extract_number: %Lu" n;
     Int64.to_int n
   | n -> fail "bad additional %d" n
@@ -172,8 +173,8 @@ and extract r =
     | 23 -> `Undefined
     | 24 -> `Simple (get_byte r)
     | 25 -> `Float (get_n r 2 get_float16)
-    | 26 -> `Float (get_n r 4 BE.get_float)
-    | 27 -> `Float (get_n r 8 BE.get_double)
+    | 26 -> `Float (get_n r 4 SE.get_float)
+    | 27 -> `Float (get_n r 8 SE.get_double)
     | 31 -> raise Break
     | a -> fail "extract: (7,%d)" a
     end
