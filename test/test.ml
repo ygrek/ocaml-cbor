@@ -60,8 +60,10 @@ let () =
     let ok = ref 0 in
     let failed = ref 0 in
     let ignored = ref 0 in
-    tests |> List.iteri begin fun i test ->
+    let nr = ref (-1) in
+    tests |> List.iter begin fun test ->
       try
+        incr nr;
         let cbor = CBOR.Simple.decode test.cbor in
         let diag = CBOR.Simple.to_diagnostic cbor in
         let () = match test.result with
@@ -74,9 +76,9 @@ let () =
         in
         incr ok
       with exn ->
-        let ignore = List.mem i [10; 11; 12; 13; 47; 48; 49; 50; 51; 52; 71] in
+        let ignore = List.mem !nr [10; 11; 12; 13; 47; 48; 49; 50; 51; 52; 71] in
         eprintfn "%s test %d: %s"
-          (if ignore then "W: ignoring" else "E:") i (match exn with Failure s -> s | _ -> Printexc.to_string exn);
+          (if ignore then "W: ignoring" else "E:") !nr (match exn with Failure s -> s | _ -> Printexc.to_string exn);
         incr (if ignore then ignored else failed)
     end;
     eprintfn "I: finished. tests ok = %d failed = %d ignored = %d" !ok !failed !ignored;
