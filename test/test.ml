@@ -1,4 +1,3 @@
-
 type result = Decoded of Yojson.Basic.json | Diagnostic of string
 
 type test = {
@@ -17,7 +16,7 @@ let of_hex s =
   let n = String.length s / 2 in
   let r = Bytes.create n in
   for i = 0 to pred n do
-    r.[i] <- Char.chr @@ int_of_string ("0x" ^ String.sub s (i*2) 2)
+    Bytes.set r i @@ Char.chr @@ int_of_string ("0x" ^ String.sub s (i*2) 2)
   done;
   Bytes.to_string r
 

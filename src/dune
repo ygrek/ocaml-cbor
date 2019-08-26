@@ -1,0 +1,4 @@
+(library
+ (name cbor)
+ (wrapped false)
+ (libraries ocplib-endian))

@@ -50,8 +50,8 @@ let hex_char x =
 let to_hex s =
   let r = Bytes.create (String.length s * 2) in
   for i = 0 to String.length s - 1 do
-    r.[i*2] <- hex_char @@ Char.code s.[i] lsr 4;
-    r.[i*2+1] <- hex_char @@ Char.code s.[i] land 0b1111;
+    Bytes.set r (i*2) @@ hex_char @@ Char.code s.[i] lsr 4;
+    Bytes.set r (i*2+1) @@ hex_char @@ Char.code s.[i] land 0b1111;
   done;
   Bytes.to_string r
 
@@ -180,7 +180,7 @@ and extract r =
     end
   | _ -> assert false
 
-let decode s =
+let decode s : t =
   let i = ref 0 in
   let x = try extract (s,i) with Break -> fail "decode: unexpected break" in
   if !i <> String.length s then fail "decode: extra data: len %d pos %d" (String.length s) !i;
