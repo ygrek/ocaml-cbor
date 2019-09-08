@@ -1,0 +1,6 @@
+(library
+  (name cbor)
+  (public_name cbor)
+  (wrapped false)
+  (modules CBOR)
+  (libraries ocplib-endian))
