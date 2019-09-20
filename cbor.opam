@@ -1,0 +1,20 @@
+opam-version: "2.0"
+maintainer: "ygrek@autistici.org"
+authors: "ygrek"
+tags: "org:ygrek"
+homepage: "https://github.com/ygrek/ocaml-cbor"
+dev-repo: "git://github.com/ygrek/ocaml-cbor.git"
+bug-reports: "https://github.com/ygrek/ocaml-cbor/issues"
+build: ["dune" "build" "-p" name "-j" jobs]
+depends: [
+  "ocaml" {>= "4.00.0"}
+  "dune"
+  "base-bytes"
+  "ocplib-endian" {>= "0.6"}
+  "yojson" {with-test}
+]
+synopsis: "CBOR encoder/decoder (RFC 7049) - native OCaml implementation"
+description: """
+The Concise Binary Object Representation (CBOR) is a data format whose design goals
+include the possibility of extremely small code size, fairly small message size, and
+extensibility without the need for version negotiation."""

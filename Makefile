@@ -1,17 +1,20 @@
-.PHONY: build test clean
+.PHONY: build test clean install
 
 all: build test
 
 build:
 	dune build @all
 
-test:
+test: build
 	dune runtest
 
 clean:
 	dune clean
 
-VERSION=$(shell oasis query version)
+install:
+	dune install
+
+VERSION=0.3
 NAME=ocaml-cbor-$(VERSION)
 
 .PHONY: release
