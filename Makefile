@@ -1,14 +1,15 @@
+.PHONY: build test clean
 
 all: build test
 
 build:
-	@dune build @all
+	dune build @all
 
 test:
-	@dune runtest
+	dune runtest
 
 clean:
-	@dune clean
+	dune clean
 
 VERSION=$(shell oasis query version)
 NAME=ocaml-cbor-$(VERSION)
