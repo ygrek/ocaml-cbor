@@ -1,0 +1,14 @@
+I: running tests from appendix_a.json
+I: total tests = 82
+W: ignoring test 10: CBOR.Error("extract_number: 18446744073709551615")
+W: ignoring test 11: expected "18446744073709551616", got "\u0001\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000", aka h'010000000000000000'
+W: ignoring test 12: CBOR.Error("extract_number: 18446744073709551615")
+W: ignoring test 13: expected "-18446744073709551617", got "\u0001\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000", aka h'010000000000000000'
+W: ignoring test 47: expected 0("2013-03-21T20:04:00Z"), got "2013-03-21T20:04:00Z"
+W: ignoring test 48: expected 1(1363896240), got 1363896240
+W: ignoring test 49: expected 1(1363896240.5), got 1.3639e+09
+W: ignoring test 50: expected 23(h'01020304'), got h'01020304'
+W: ignoring test 51: expected 24(h'6449455446'), got h'6449455446'
+W: ignoring test 52: expected 32("http://www.example.com"), got "http://www.example.com"
+W: ignoring test 71: expected (_ h'0102', h'030405'), got h'0102030405'
+I: finished. tests ok = 71 failed = 0 ignored = 11
