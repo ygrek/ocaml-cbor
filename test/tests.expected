@@ -1,14 +1,85 @@
 I: running tests from appendix_a.json
 I: total tests = 82
+I: test 0: expected and got 0
+I: test 1: expected and got 1
+I: test 2: expected and got 10
+I: test 3: expected and got 23
+I: test 4: expected and got 24
+I: test 5: expected and got 25
+I: test 6: expected and got 100
+I: test 7: expected and got 1000
+I: test 8: expected and got 1000000
+I: test 9: expected and got 1000000000000
 W: ignoring test 10: CBOR.Error("extract_number: 18446744073709551615")
 W: ignoring test 11: expected "18446744073709551616", got "\u0001\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000", aka h'010000000000000000'
 W: ignoring test 12: CBOR.Error("extract_number: 18446744073709551615")
 W: ignoring test 13: expected "-18446744073709551617", got "\u0001\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000", aka h'010000000000000000'
+I: test 14: expected and got -1
+I: test 15: expected and got -10
+I: test 16: expected and got -100
+I: test 17: expected and got -1000
+I: test 18: expected and got 0.0
+I: test 19: expected and got -0.0
+I: test 20: expected and got 1.0
+I: test 21: expected and got 1.1
+I: test 22: expected and got 1.5
+I: test 23: expected and got 65504.0
+I: test 24: expected and got 100000.0
+I: test 25: expected and got 3.4028234663852886e+38
+I: test 26: expected and got 1e+300
+I: test 27: expected and got 5.9604644775390625e-08
+I: test 28: expected and got 6.103515625e-05
+I: test 29: expected and got -4.0
+I: test 30: expected and got -4.1
+I: test 31: expected and got Infinity
+I: test 32: expected and got NaN
+I: test 33: expected and got -Infinity
+I: test 34: expected and got Infinity
+I: test 35: expected and got NaN
+I: test 36: expected and got -Infinity
+I: test 37: expected and got Infinity
+I: test 38: expected and got NaN
+I: test 39: expected and got -Infinity
+I: test 40: expected and got false
+I: test 41: expected and got true
+I: test 42: expected and got null
+I: test 43: expected and got undefined
+I: test 44: expected and got simple(16)
+I: test 45: expected and got simple(24)
+I: test 46: expected and got simple(255)
 W: ignoring test 47: expected 0("2013-03-21T20:04:00Z"), got "2013-03-21T20:04:00Z"
 W: ignoring test 48: expected 1(1363896240), got 1363896240
 W: ignoring test 49: expected 1(1363896240.5), got 1.3639e+09
 W: ignoring test 50: expected 23(h'01020304'), got h'01020304'
 W: ignoring test 51: expected 24(h'6449455446'), got h'6449455446'
 W: ignoring test 52: expected 32("http://www.example.com"), got "http://www.example.com"
+I: test 53: expected and got h''
+I: test 54: expected and got h'01020304'
+I: test 55: expected and got ""
+I: test 56: expected and got "a"
+I: test 57: expected and got "IETF"
+I: test 58: expected and got "\"\\"
+I: test 59: expected and got "ü"
+I: test 60: expected and got "水"
+I: test 61: expected and got "𐅑"
+I: test 62: expected and got []
+I: test 63: expected and got [1,2,3]
+I: test 64: expected and got [1,[2,3],[4,5]]
+I: test 65: expected and got [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25]
+I: test 66: expected and got {}
+I: test 67: expected and got {1: 2, 3: 4}
+I: test 68: expected and got {"a":1,"b":[2,3]}
+I: test 69: expected and got ["a",{"b":"c"}]
+I: test 70: expected and got {"a":"A","b":"B","c":"C","d":"D","e":"E"}
 W: ignoring test 71: expected (_ h'0102', h'030405'), got h'0102030405'
+I: test 72: expected and got "streaming"
+I: test 73: expected and got []
+I: test 74: expected and got [1,[2,3],[4,5]]
+I: test 75: expected and got [1,[2,3],[4,5]]
+I: test 76: expected and got [1,[2,3],[4,5]]
+I: test 77: expected and got [1,[2,3],[4,5]]
+I: test 78: expected and got [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25]
+I: test 79: expected and got {"a":1,"b":[2,3]}
+I: test 80: expected and got ["a",{"b":"c"}]
+I: test 81: expected and got {"Fun":true,"Amt":-2}
 I: finished. tests ok = 71 failed = 0 ignored = 11

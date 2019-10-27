@@ -6,6 +6,8 @@ type test = {
   result : result;
 }
 
+let expected_failures = [10; 11; 12; 13; 47; 48; 49; 50; 51; 52; 71]
+
 let (@@) f x = f x
 let (|>) x f = f x
 let eprintfn fmt = Printf.ksprintf prerr_endline fmt
@@ -64,28 +66,39 @@ let () =
         files
     in
     eprintfn "I: total tests = %d" (List.length tests);
-    let ok = ref 0 in
-    let failed = ref 0 in
-    let ignored = ref 0 in
-    let nr = ref (-1) in
-    tests |> List.iter begin fun test ->
-      try
-        incr nr;
+    tests |> List.fold_left (fun (successes, warnings, failures) test ->
+      let nr = successes + warnings + failures in
+      let report success s =
+        let ignore = List.mem nr expected_failures in
+        let status, tally =
+          match success, ignore with
+          | true, _ -> "I:", (successes + 1, warnings, failures)
+          | false, true -> "W: ignoring", (successes, warnings + 1, failures)
+          | false, false -> "E:", (successes, warnings, failures +1)
+        in
+        eprintfn "%s test %d: %s" status nr s;
+        tally
+      in
+      let test () =
         let cbor = CBOR.Simple.decode test.cbor in
         let diag = CBOR.Simple.to_diagnostic cbor in
-        let () = match test.result with
+        match test.result with
+        | Diagnostic s when s = diag ->
+            report true @@ Printf.sprintf "expected and got %s" s
         | Diagnostic s ->
-          if s <> diag then fail "expected %s, got %s" s diag
+            report false @@ Printf.sprintf "expected %s, got %s" s diag
         | Decoded json ->
-          let json' = json_of_cbor cbor in
-          if json <> json' then fail "expected %s, got %s, aka %s"
-            (Yojson.Basic.to_string json) (Yojson.Basic.to_string json') diag
-        in
-        incr ok
-      with exn ->
-        let ignore = List.mem !nr [10; 11; 12; 13; 47; 48; 49; 50; 51; 52; 71] in
-        eprintfn "%s test %d: %s"
-          (if ignore then "W: ignoring" else "E:") !nr (match exn with Failure s -> s | _ -> Printexc.to_string exn);
-        incr (if ignore then ignored else failed)
-    end;
-    eprintfn "I: finished. tests ok = %d failed = %d ignored = %d" !ok !failed !ignored
+            let json' = json_of_cbor cbor in
+            if json = json' then
+              report true @@ Printf.sprintf "expected and got %s"
+                (Yojson.Basic.to_string json)
+            else
+              report false @@ Printf.sprintf "expected %s, got %s, aka %s"
+                (Yojson.Basic.to_string json) (Yojson.Basic.to_string json') diag
+      in
+      try test () with exn -> report false @@ Printexc.to_string exn
+    ) (0, 0, 0)
+    |> (fun (successes, warnings, failures) ->
+        eprintfn "I: finished. tests ok = %d failed = %d ignored = %d"
+          successes failures warnings
+    )
