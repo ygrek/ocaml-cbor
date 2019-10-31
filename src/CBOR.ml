@@ -1,5 +1,43 @@
 (** CBOR encoder/decoder, RFC 7049 *)
 
+module type Integer = sig
+  type t
+  val of_int : int -> t
+  val of_int64 : int64 -> t
+  val of_int32 : int32 -> t
+  val to_int : t -> int
+  val is_lt0 : t -> bool
+  val minus_one_minus : t -> t
+  val put : Buffer.t -> maj:int -> int -> unit
+  val int : Buffer.t -> t -> unit
+  val foo : t -> t (* XXX: check the function uses *)
+  val bprintf_t : Buffer.t -> t -> unit
+end
+
+module type Simple = sig
+
+type integer
+
+type t =
+[ `Null
+| `Undefined
+| `Simple of int
+| `Bool of bool
+| `Int of integer
+| `Float of float
+| `Bytes of string
+| `Text of string
+| `Array of t list
+| `Map of (t * t) list
+]
+
+val encode : t -> string
+val decode : string -> t
+
+val to_diagnostic : t -> string
+
+end
+
 open Printf
 module BE = EndianBytes.BigEndian_unsafe
 module SE = EndianString.BigEndian_unsafe
@@ -25,23 +63,6 @@ let put_n b n f x =
   f s 0 x;
   Buffer.add_string b (Bytes.unsafe_to_string s)
 
-let put b ~maj n =
-  assert (n >= 0);
-  if n < 24 then
-    init b ~maj n
-  else if n < 256 then
-    begin init b ~maj 24; Buffer.add_char b @@ char_of_int n end
-  else if n < 65536 then
-    begin init b ~maj 25; put_n b 2 BE.set_int16 n end
-  else if Int64.(compare (of_int n) 4294967296) < 0 then (* optcomp int32 *)
-    begin init b ~maj 26; put_n b 4 BE.set_int32 @@ Int32.of_int n end
-  else
-    begin init b ~maj 27; put_n b 8 BE.set_int64 @@ Int64.of_int n end
-
-let int b n =
-  let (maj,n) = if n < 0 then 1, -1 - n else 0, n in
-  put b ~maj n
-
 let hex_char x =
   assert (x >= 0 && x < 16);
   if x <= 9 then Char.chr @@ Char.code '0' + x
@@ -57,14 +78,63 @@ let to_hex s =
 
 end
 
-module Simple = struct
+module CInt = struct
+  open Encode
+
+  type t = int
+
+  let two_min_int32 = 2 * Int32.(to_int min_int)
+  let int64_max_int = Int64.of_int max_int
+
+  let of_int x = x
+
+  let to_int x = x
+
+  let of_int64 x =
+    if x > int64_max_int || x < 0L then fail "out-of-range: %Lu" x;
+    Int64.to_int x
+
+  let of_int32 x = Int32.to_int x
+
+  let is_lt0 x = x <= 0
+
+  let foo x =
+    x - two_min_int32
+
+  let minus_one_minus x =
+    -1 - x
+
+  let put b ~maj n =
+    assert (n >= 0);
+    if n < 24 then
+      init b ~maj n
+    else if n < 256 then
+      begin init b ~maj 24; Buffer.add_char b @@ char_of_int n end
+    else if n < 65536 then
+      begin init b ~maj 25; put_n b 2 BE.set_int16 n end
+    else if Int64.(compare (of_int n) 4294967296L) < 0 then
+      begin init b ~maj 26; put_n b 4 BE.set_int32 @@ Int32.of_int n end
+    else
+      begin init b ~maj 27; put_n b 8 BE.set_int64 @@ Int64.of_int n end
+
+  let int b n =
+    let (maj,n) = if n < 0 then 1, -1 - n else 0, n in
+    put b ~maj n
+
+  let bprintf_t b x =
+    bprintf b "%d" x
+end
+
+module SimpleMake (Integer : Integer) = struct
+
+type integer = Integer.t
 
 type t =
 [ `Null
 | `Undefined
 | `Simple of int
 | `Bool of bool
-| `Int of int
+| `Int of integer
 | `Float of float
 | `Bytes of string
 | `Text of string
@@ -74,6 +144,7 @@ type t =
 
 let encode item =
   let open Encode in
+  let put = Integer.put in
   let b = start () in
   let rec write = function
   | `Null -> put b ~maj:7 22;
@@ -82,7 +153,7 @@ let encode item =
   | `Bool true -> put b ~maj:7 21;
   | `Simple n when (n >= 0 && n <= 23) || (n >= 32 && n <= 255) -> put b ~maj:7 n
   | `Simple n -> fail "encode: simple(%d)" n
-  | `Int n -> int b n
+  | `Int n -> Integer.int b n
   | `Float f -> init b ~maj:7 27; put_n b 8 BE.set_double f
   | `Bytes s -> put b ~maj:2 (String.length s); Buffer.add_string b s
   | `Text s -> put b ~maj:3 (String.length s); Buffer.add_string b s
@@ -106,21 +177,18 @@ let get_s (s,_ as r) n = String.sub s (need r n) n
 let get_additional byte1 = byte1 land 0b11111
 let is_indefinite byte1 = get_additional byte1 = 31
 
-let int64_max_int = Int64.of_int max_int
-let two_min_int32 = 2 * Int32.to_int Int32.min_int
-
 let extract_number byte1 r =
   match get_additional byte1 with
-  | n when n < 24 -> n
-  | 24 -> get_byte r
-  | 25 -> get_n r 2 SE.get_uint16
+  | n when n < 24 -> Integer.of_int n
+  | 24 -> Integer.of_int @@ get_byte r
+  | 25 -> Integer.of_int @@ get_n r 2 SE.get_uint16
   | 26 ->
-    let n = Int32.to_int @@ get_n r 4 SE.get_int32 in
-    if n < 0 then n - two_min_int32 else n
+    let n = Integer.of_int32 @@ get_n r 4 SE.get_int32 in
+    if Integer.is_lt0 n then Integer.foo n else n
   | 27 ->
-    let n = get_n r 8 SE.get_int64 in
-    if n > int64_max_int || n < 0L then fail "extract_number: %Lu" n;
-    Int64.to_int n
+    (* XXX: why are negative elements of type 26 treated in a special way and
+     * not those of type 27? *)
+    Integer.of_int64 @@ get_n r 8 SE.get_int64
   | n -> fail "bad additional %d" n
 
 let get_float16 s i =
@@ -142,7 +210,8 @@ let extract_list byte1 r f =
     let l = ref [] in
     try while true do l := f r :: !l done; assert false with Break -> List.rev !l
   else
-    let n = extract_number byte1 r in Array.to_list @@ Array.init n (fun _ -> f r)
+    let n = Integer.to_int @@ extract_number byte1 r in
+    Array.to_list @@ Array.init n (fun _ -> f r)
 
 let rec extract_pair r =
   let a = extract r in
@@ -153,12 +222,12 @@ and extract_string byte1 r f =
     let b = Buffer.create 10 in
     try while true do Buffer.add_string b (f @@ extract r) done; assert false with Break -> Buffer.contents b
   else
-    let n = extract_number byte1 r in get_s r n
+    let n = extract_number byte1 r in get_s r @@ Integer.to_int n
 and extract r =
   let byte1 = get_byte r in
   match byte1 lsr 5 with
   | 0 -> `Int (extract_number byte1 r)
-  | 1 -> `Int (-1 - extract_number byte1 r)
+  | 1 -> `Int (Integer.minus_one_minus @@ extract_number byte1 r)
   | 2 -> `Bytes (extract_string byte1 r (function `Bytes s -> s | _ -> fail "extract: not a bytes chunk"))
   | 3 -> `Text (extract_string byte1 r (function `Text s -> s | _ -> fail "extract: not a text chunk"))
   | 4 -> `Array (extract_list byte1 r extract)
@@ -195,7 +264,7 @@ let to_diagnostic item =
   | `Bool true -> put "true"
   | `Simple n -> bprintf b "simple(%d)" n
   | `Undefined -> put "undefined"
-  | `Int n -> bprintf b "%d" n
+  | `Int n -> Integer.bprintf_t b n
   | `Float f ->
     begin match classify_float f with
     | FP_nan -> put "NaN"
@@ -216,4 +285,6 @@ let to_diagnostic item =
   write item;
   Buffer.contents b
 
-end (* Simple *)
+end (* SimpleMake *)
+
+module Simple = SimpleMake(CInt)
