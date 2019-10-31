@@ -6,7 +6,21 @@ type test = {
   result : result;
 }
 
-let expected_failures = [10; 11; 12; 13; 47; 48; 49; 50; 51; 52; 71]
+module type Impl = sig
+  include CBOR.Simple
+  val expected_failures : int list
+  val name : string
+  val t_to_json_int : integer -> Yojson.Basic.json
+end
+
+module Impl : Impl = struct
+  include CBOR.Simple
+  let expected_failures = [10; 11; 12; 13; 47; 48; 49; 50; 51; 52; 71; 82]
+  let name = "int"
+  let t_to_json_int x =
+    `Int x
+end
+
 
 let (@@) f x = f x
 let (|>) x f = f x
@@ -41,8 +55,11 @@ let read file =
     | _ -> assert false
     end
 
-let rec json_of_cbor : CBOR.Simple.t -> Yojson.Basic.t = function
-| (`Null | `Bool _ | `Int _ | `Float _ as x) -> x
+module TestMake (Simple : Impl) = struct
+
+let rec json_of_cbor : Simple.t -> Yojson.Basic.t = function
+| (`Null | `Bool _ | `Float _ as x) -> x
+| `Int x -> Simple.t_to_json_int x
 | `Undefined | `Simple _ -> `Null
 | `Bytes x -> `String x
 | `Text x -> `String x
@@ -52,36 +69,36 @@ let rec json_of_cbor : CBOR.Simple.t -> Yojson.Basic.t = function
   | `Text s -> s, json_of_cbor v
   | _ -> fail "json_of_cbor: expected string key") x)
 
-let () =
+let run () =
   match List.tl @@ Array.to_list Sys.argv with
   | [] ->
     eprintfn "E: no test file given";
     exit 2
   | files ->
-    eprintfn "I: running tests from %s" (String.concat ", " files);
+    eprintfn "I: running %s tests from %s" Simple.name (String.concat ", " files);
     let tests =
       List.fold_left
         (fun all_tests file -> all_tests @ read file)
         []
         files
     in
-    eprintfn "I: total tests = %d" (List.length tests);
+    eprintfn "I: total %s tests = %d" Simple.name(List.length tests);
     tests |> List.fold_left (fun (successes, warnings, failures) test ->
       let nr = successes + warnings + failures in
       let report success s =
-        let ignore = List.mem nr expected_failures in
+        let ignore = List.mem nr Simple.expected_failures in
         let status, tally =
           match success, ignore with
           | true, _ -> "I:", (successes + 1, warnings, failures)
-          | false, true -> "W: ignoring", (successes, warnings + 1, failures)
+          | false, true -> "W:", (successes, warnings + 1, failures)
           | false, false -> "E:", (successes, warnings, failures +1)
         in
-        eprintfn "%s test %d: %s" status nr s;
+        eprintfn "%s %s test %d: %s" status Simple.name nr s;
         tally
       in
       let test () =
-        let cbor = CBOR.Simple.decode test.cbor in
-        let diag = CBOR.Simple.to_diagnostic cbor in
+        let cbor = Simple.decode test.cbor in
+        let diag = Simple.to_diagnostic cbor in
         match test.result with
         | Diagnostic s when s = diag ->
             report true @@ Printf.sprintf "expected and got %s" s
@@ -99,6 +116,13 @@ let () =
       try test () with exn -> report false @@ Printexc.to_string exn
     ) (0, 0, 0)
     |> (fun (successes, warnings, failures) ->
-        eprintfn "I: finished. tests ok = %d failed = %d ignored = %d"
-          successes failures warnings
+        eprintfn "I: %s tests finished. tests ok = %d failed = %d ignored = %d"
+          Simple.name successes failures warnings
     )
+
+end
+
+module Test = TestMake(Impl)
+
+let () =
+  Test.run ();
