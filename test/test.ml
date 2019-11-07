@@ -111,17 +111,16 @@ let run () =
         let diag = Simple.to_diagnostic cbor in
         match test.result with
         | Diagnostic s when s = diag ->
-            report true @@ Printf.sprintf "expected and got %s" s
+            report true @@ s
         | Diagnostic s ->
-            report false @@ Printf.sprintf "expected %s, got %s" s diag
+            report false @@ diag
         | Decoded json ->
             let json' = json_of_cbor cbor in
             if json = json' then
-              report true @@ Printf.sprintf "expected and got %s"
-                (Yojson.Basic.to_string json)
+              report true @@ Yojson.Basic.to_string json
             else
-              report false @@ Printf.sprintf "expected %s, got %s, aka %s"
-                (Yojson.Basic.to_string json) (Yojson.Basic.to_string json') diag
+              report false @@ Printf.sprintf "%s, aka %s"
+                 (Yojson.Basic.to_string json') diag
       in
       try test () with exn -> report false @@ Printexc.to_string exn
     ) (0, 0, 0)
