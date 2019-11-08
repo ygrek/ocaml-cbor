@@ -33,7 +33,7 @@ let put b ~maj n =
     begin init b ~maj 24; Buffer.add_char b @@ char_of_int n end
   else if n < 65536 then
     begin init b ~maj 25; put_n b 2 BE.set_int16 n end
-  else if n < 4294967296 then (* optcomp int32 *)
+  else if Int64.(compare (of_int n) 4294967296) < 0 then (* optcomp int32 *)
     begin init b ~maj 26; put_n b 4 BE.set_int32 @@ Int32.of_int n end
   else
     begin init b ~maj 27; put_n b 8 BE.set_int64 @@ Int64.of_int n end
