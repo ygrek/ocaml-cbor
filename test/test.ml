@@ -52,9 +52,17 @@ let rec json_of_cbor : CBOR.Simple.t -> Yojson.Basic.t = function
 
 let () =
   match List.tl @@ Array.to_list Sys.argv with
-  | file::[] ->
-    eprintfn "I: running tests from %s" file;
-    let tests = read file in
+  | [] ->
+    eprintfn "E: no test file given";
+    exit 2
+  | files ->
+    eprintfn "I: running tests from %s" (String.concat ", " files);
+    let tests =
+      List.fold_left
+        (fun all_tests file -> all_tests @ read file)
+        []
+        files
+    in
     eprintfn "I: total tests = %d" (List.length tests);
     let ok = ref 0 in
     let failed = ref 0 in
@@ -82,6 +90,3 @@ let () =
     end;
     eprintfn "I: finished. tests ok = %d failed = %d ignored = %d" !ok !failed !ignored;
     exit (if !failed = 0 then 0 else 1)
-  | _ ->
-    eprintfn "E: no test file given";
-    exit 2
