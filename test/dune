@@ -4,7 +4,7 @@
   (libraries cbor yojson))
 
 (rule
-  (with-stderr-to tests.output (run ./test.exe appendix_a.json)))
+  (with-stderr-to tests.output (run ./test.exe appendix_a.json extra.json)))
 
 (alias
   (name runtest)

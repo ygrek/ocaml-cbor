@@ -27,3 +27,4 @@ val to_diagnostic : t -> string
 end
 
 module Simple : sig include Simple with type integer = int end
+module Simple64 : sig include Simple with type integer = int64 end

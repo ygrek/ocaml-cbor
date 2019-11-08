@@ -125,6 +125,57 @@ module CInt = struct
     bprintf b "%d" x
 end
 
+module CInt64 = struct
+  open Encode
+
+  type t = int64
+
+  let two_min_int32 = Int64.(mul 2L @@ of_int32 Int32.min_int)
+
+  let of_int = Int64.of_int
+
+  let to_int = Int64.to_int (* TODO: check that value is in range for int *)
+
+  let of_int64 x = x
+
+  let of_int32 = Int64.of_int32
+
+  let is_lt0 x = compare x 0L < 0
+
+  let foo x =
+    Int64.sub x two_min_int32
+
+  let minus_one_minus x =
+    Int64.(sub minus_one x)
+
+  let put = CInt.put
+
+  let put_int64 b ~maj n =
+    assert (Int64.compare n 0L >= 0);
+    if Int64.compare n 24L < 0 then
+      init b ~maj @@ Int64.to_int n
+    else if Int64.compare n 256L < 0 then
+      begin init b ~maj 24; Buffer.add_char b @@ char_of_int @@ Int64.to_int n end
+    else if Int64.compare n 65536L < 0 then
+      begin init b ~maj 25; put_n b 2 BE.set_int16 @@ Int64.to_int n end
+    else if Int64.compare n 4294967296L < 0 then
+      begin init b ~maj 26; put_n b 4 BE.set_int32 @@ Int64.to_int32 n end
+    else
+      begin init b ~maj 27; put_n b 8 BE.set_int64 n end
+
+  let int b n =
+    let (maj,n) =
+      if compare n 0L < 0 then
+        1, Int64.(sub minus_one n)
+      else
+        0, n
+    in
+    put_int64 b ~maj n
+
+  let bprintf_t b x =
+    bprintf b "%Ld" x
+end
+
 module SimpleMake (Integer : Integer) = struct
 
 type integer = Integer.t
@@ -288,3 +339,4 @@ let to_diagnostic item =
 end (* SimpleMake *)
 
 module Simple = SimpleMake(CInt)
+module Simple64 = SimpleMake(CInt64)

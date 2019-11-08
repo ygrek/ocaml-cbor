@@ -21,6 +21,16 @@ module Impl : Impl = struct
     `Int x
 end
 
+module Impl64 : Impl = struct
+  include CBOR.Simple64
+  let expected_failures = [10; 11; 12; 13; 47; 48; 49; 50; 51; 52; 71]
+  let name = "int64"
+  let t_to_json_int x =
+    if x < Int64.of_int max_int then
+      `Int (Int64.to_int x)
+    else
+      `String (Int64.to_string x)
+end
 
 let (@@) f x = f x
 let (|>) x f = f x
@@ -123,6 +133,8 @@ let run () =
 end
 
 module Test = TestMake(Impl)
+module Test64 = TestMake(Impl64)
 
 let () =
   Test.run ();
+  Test64.run ()
