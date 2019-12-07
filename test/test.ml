@@ -1,4 +1,4 @@
-type result = Decoded of Yojson.Basic.json | Diagnostic of string
+type result = Decoded of Yojson.Basic.t | Diagnostic of string
 
 type test = {
   cbor : string;
@@ -39,7 +39,7 @@ let read file =
     | _ -> assert false
     end
 
-let rec json_of_cbor : CBOR.Simple.t -> Yojson.Basic.json = function
+let rec json_of_cbor : CBOR.Simple.t -> Yojson.Basic.t = function
 | (`Null | `Bool _ | `Int _ | `Float _ as x) -> x
 | `Undefined | `Simple _ -> `Null
 | `Bytes x -> `String x
