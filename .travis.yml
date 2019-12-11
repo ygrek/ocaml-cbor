@@ -8,6 +8,7 @@ env:
   - PINS="cbor:."
   - DISTRO="ubuntu-16.04"
   matrix:
+  - PACKAGE="cbor" OCAML_VERSION="4.02"
   - PACKAGE="cbor" OCAML_VERSION="4.03"
   - PACKAGE="cbor" OCAML_VERSION="4.04"
   - PACKAGE="cbor" OCAML_VERSION="4.05"
