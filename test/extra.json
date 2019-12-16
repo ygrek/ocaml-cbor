@@ -1,0 +1,8 @@
+[
+  {
+    "cbor": "G3/////////",
+    "hex": "1b7fffffffffffffff",
+    "roundtrip": true,
+    "decoded": 9223372036854775807
+  }
+]

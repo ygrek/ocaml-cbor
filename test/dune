@@ -3,7 +3,10 @@
   (name test)
   (libraries cbor yojson))
 
+(rule
+  (with-stderr-to tests.output (run ./test.exe appendix_a.json extra.json)))
+
 (alias
   (name runtest)
   (deps test.exe)
-  (action (run ./test.exe appendix_a.json)))
+  (action (diff tests.expected tests.output)))

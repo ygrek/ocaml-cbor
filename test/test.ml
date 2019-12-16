@@ -6,6 +6,32 @@ type test = {
   result : result;
 }
 
+module type Impl = sig
+  include CBOR.Simple
+  val expected_failures : int list
+  val name : string
+  val t_to_json_int : integer -> Yojson.Basic.json
+end
+
+module Impl : Impl = struct
+  include CBOR.Simple
+  let expected_failures = [10; 11; 12; 13; 47; 48; 49; 50; 51; 52; 71; 82]
+  let name = "int"
+  let t_to_json_int x =
+    `Int x
+end
+
+module Impl64 : Impl = struct
+  include CBOR.Simple64
+  let expected_failures = [10; 11; 12; 13; 47; 48; 49; 50; 51; 52; 71]
+  let name = "int64"
+  let t_to_json_int x =
+    if x < Int64.of_int max_int then
+      `Int (Int64.to_int x)
+    else
+      `String (Int64.to_string x)
+end
+
 let (@@) f x = f x
 let (|>) x f = f x
 let eprintfn fmt = Printf.ksprintf prerr_endline fmt
@@ -39,8 +65,11 @@ let read file =
     | _ -> assert false
     end
 
-let rec json_of_cbor : CBOR.Simple.t -> Yojson.Basic.t = function
-| (`Null | `Bool _ | `Int _ | `Float _ as x) -> x
+module TestMake (Simple : Impl) = struct
+
+let rec json_of_cbor : Simple.t -> Yojson.Basic.t = function
+| (`Null | `Bool _ | `Float _ as x) -> x
+| `Int x -> Simple.t_to_json_int x
 | `Undefined | `Simple _ -> `Null
 | `Bytes x -> `String x
 | `Text x -> `String x
@@ -50,38 +79,61 @@ let rec json_of_cbor : CBOR.Simple.t -> Yojson.Basic.t = function
   | `Text s -> s, json_of_cbor v
   | _ -> fail "json_of_cbor: expected string key") x)
 
-let () =
+let run () =
   match List.tl @@ Array.to_list Sys.argv with
-  | file::[] ->
-    eprintfn "I: running tests from %s" file;
-    let tests = read file in
-    eprintfn "I: total tests = %d" (List.length tests);
-    let ok = ref 0 in
-    let failed = ref 0 in
-    let ignored = ref 0 in
-    let nr = ref (-1) in
-    tests |> List.iter begin fun test ->
-      try
-        incr nr;
-        let cbor = CBOR.Simple.decode test.cbor in
-        let diag = CBOR.Simple.to_diagnostic cbor in
-        let () = match test.result with
-        | Diagnostic s ->
-          if s <> diag then fail "expected %s, got %s" s diag
-        | Decoded json ->
-          let json' = json_of_cbor cbor in
-          if json <> json' then fail "expected %s, got %s, aka %s"
-            (Yojson.Basic.to_string json) (Yojson.Basic.to_string json') diag
-        in
-        incr ok
-      with exn ->
-        let ignore = List.mem !nr [10; 11; 12; 13; 47; 48; 49; 50; 51; 52; 71] in
-        eprintfn "%s test %d: %s"
-          (if ignore then "W: ignoring" else "E:") !nr (match exn with Failure s -> s | _ -> Printexc.to_string exn);
-        incr (if ignore then ignored else failed)
-    end;
-    eprintfn "I: finished. tests ok = %d failed = %d ignored = %d" !ok !failed !ignored;
-    exit (if !failed = 0 then 0 else 1)
-  | _ ->
+  | [] ->
     eprintfn "E: no test file given";
     exit 2
+  | files ->
+    eprintfn "I: running %s tests from %s" Simple.name (String.concat ", " files);
+    let tests =
+      List.fold_left
+        (fun all_tests file -> all_tests @ read file)
+        []
+        files
+    in
+    eprintfn "I: total %s tests = %d" Simple.name(List.length tests);
+    tests |> List.fold_left (fun (successes, warnings, failures) test ->
+      let nr = successes + warnings + failures in
+      let report success s =
+        let ignore = List.mem nr Simple.expected_failures in
+        let status, tally =
+          match success, ignore with
+          | true, _ -> "I:", (successes + 1, warnings, failures)
+          | false, true -> "W:", (successes, warnings + 1, failures)
+          | false, false -> "E:", (successes, warnings, failures +1)
+        in
+        eprintfn "%s %s test %d: %s" status Simple.name nr s;
+        tally
+      in
+      let test () =
+        let cbor = Simple.decode test.cbor in
+        let diag = Simple.to_diagnostic cbor in
+        match test.result with
+        | Diagnostic s when s = diag ->
+            report true @@ s
+        | Diagnostic s ->
+            report false @@ diag
+        | Decoded json ->
+            let json' = json_of_cbor cbor in
+            if json = json' then
+              report true @@ Yojson.Basic.to_string json
+            else
+              report false @@ Printf.sprintf "%s, aka %s"
+                 (Yojson.Basic.to_string json') diag
+      in
+      try test () with exn -> report false @@ Printexc.to_string exn
+    ) (0, 0, 0)
+    |> (fun (successes, warnings, failures) ->
+        eprintfn "I: %s tests finished. tests ok = %d failed = %d ignored = %d"
+          Simple.name successes failures warnings
+    )
+
+end
+
+module Test = TestMake(Impl)
+module Test64 = TestMake(Impl64)
+
+let () =
+  Test.run ();
+  Test64.run ()
