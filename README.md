@@ -1,7 +1,7 @@
 OCaml native CBOR decoder/encoder
 =================================
 
-[![Build Status](https://travis-ci.org/ygrek/cbor.svg?branch=master)](https://travis-ci.org/ygrek/cbor)
+[![Build Status](https://travis-ci.com/ygrek/ocaml-cbor.svg?branch=master)](https://travis-ci.com/ygrek/ocaml-cbor)
 
 References
 ----------
