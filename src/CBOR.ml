@@ -25,9 +25,10 @@ let put_n b n f x =
   f s 0 x;
   Buffer.add_string b (Bytes.unsafe_to_string s)
 
-let max_uint32 = match Int32.unsigned_to_int 0xffffffffl with
-  | None -> Int.max_int
-  | Some n -> n
+let max_uint32 =
+  match Sys.word_size with
+  | 32 -> max_int (* max signed int, but on 32-bit this is enough *)
+  | _ -> int_of_string "0xFF_FF_FF_FF" (* so that it compiles on 32-bit *)
 
 let put b ~maj n =
   assert (n >= 0);
