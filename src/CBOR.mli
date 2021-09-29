@@ -19,6 +19,7 @@ type t =
 
 val encode : t -> string
 val decode : string -> t
+val decode_partial : string -> t * string
 
 val to_diagnostic : t -> string
 

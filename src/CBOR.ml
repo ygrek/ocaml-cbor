@@ -185,11 +185,15 @@ and extract r =
     end
   | _ -> assert false
 
-let decode s : t =
+let decode_partial s =
   let i = ref 0 in
   let x = try extract (s,i) with Break -> fail "decode: unexpected break" in
-  if !i <> String.length s then fail "decode: extra data: len %d pos %d" (String.length s) !i;
-  x
+  x, String.sub s !i (String.length s - !i)
+
+let decode s : t =
+  let x, rest = decode_partial s in
+  if rest = "" then x
+  else fail "decode: extra data: len %d pos %d" (String.length s) (String.length s - String.length rest)
 
 let to_diagnostic item =
   let b = Buffer.create 10 in
