@@ -1,9 +1,8 @@
-
 (executable
   (name test)
   (libraries cbor yojson))
 
 (alias
   (name runtest)
-  (deps test.exe)
+  (deps test.exe appendix_a.json)
   (action (run ./test.exe appendix_a.json)))
