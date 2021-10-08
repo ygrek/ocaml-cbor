@@ -209,7 +209,7 @@ let to_diagnostic item =
     begin match classify_float f with
     | FP_nan -> put "NaN"
     | FP_infinite -> put (if f < 0. then "-Infinity" else "Infinity")
-    | FP_zero | FP_normal | FP_subnormal -> bprintf b "%g" f
+    | FP_zero | FP_normal | FP_subnormal -> put (Float.to_string f)
     end
   | `Bytes s -> bprintf b "h'%s'" (Encode.to_hex s)
   | `Text s -> bprintf b "\"%s\"" s
