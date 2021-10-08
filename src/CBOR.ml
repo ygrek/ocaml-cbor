@@ -75,6 +75,7 @@ type t =
 | `Text of string
 | `Array of t list
 | `Map of (t * t) list
+| `Tag of int * t
 ]
 
 let encode item =
@@ -93,6 +94,7 @@ let encode item =
   | `Text s -> put b ~maj:3 (String.length s); Buffer.add_string b s
   | `Array l -> put b ~maj:4 (List.length l); List.iter write l
   | `Map m -> put b ~maj:5 (List.length m); List.iter (fun (a,b) -> write a; write b) m
+  | `Tag (t, v) -> put b ~maj:6 t; write v
   in
   write item;
   Buffer.contents b
@@ -168,7 +170,7 @@ and extract r =
   | 3 -> `Text (extract_string byte1 r (function `Text s -> s | _ -> fail "extract: not a text chunk"))
   | 4 -> `Array (extract_list byte1 r extract)
   | 5 -> `Map (extract_list byte1 r extract_pair)
-  | 6 -> let _tag = extract_number byte1 r in extract r
+  | 6 -> let tag = extract_number byte1 r in let v = extract r in `Tag (tag, v)
   | 7 ->
     begin match get_additional byte1 with
     | n when n < 20 -> `Simple n
@@ -221,6 +223,10 @@ let to_diagnostic item =
     put "{";
     m |> list_iteri (fun i (k,v) -> if i <> 0 then put ", "; write k; put ": "; write v);
     put "}"
+  | `Tag (t, v) ->
+    bprintf b "%i(" t;
+    write v;
+    put ")"
   in
   write item;
   Buffer.contents b
