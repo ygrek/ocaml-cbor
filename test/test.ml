@@ -49,6 +49,8 @@ let rec json_of_cbor : CBOR.Simple.t -> Yojson.Basic.t = function
   match k with
   | `Text s -> s, json_of_cbor v
   | _ -> fail "json_of_cbor: expected string key") x)
+| `Tag (t, v) -> `String (Printf.sprintf "%d(%s)" t
+                            (Yojson.Basic.to_string (json_of_cbor v)))
 
 let () =
   match List.tl @@ Array.to_list Sys.argv with
