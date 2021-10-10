@@ -14,7 +14,7 @@ clean:
 install:
 	dune install
 
-VERSION=0.4
+VERSION=0.5
 NAME=ocaml-cbor-$(VERSION)
 
 .PHONY: release
