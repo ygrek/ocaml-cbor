@@ -77,7 +77,7 @@ let () =
         in
         incr ok
       with exn ->
-        let ignore = List.mem !nr [10; 11; 12; 13; 47; 48; 49; 50; 51; 52; 71] in
+        let ignore = List.mem !nr [10; 11; 12; 13; 71] in
         eprintfn "%s test %d: %s"
           (if ignore then "W: ignoring" else "E:") !nr (match exn with Failure s -> s | _ -> Printexc.to_string exn);
         incr (if ignore then ignored else failed)
