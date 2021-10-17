@@ -1,8 +1,9 @@
 (executable
-  (name test)
-  (libraries cbor yojson))
+ (name test)
+ (libraries cbor yojson))
 
-(alias
-  (name runtest)
-  (deps test.exe appendix_a.json ctap2.json)
-  (action (run ./test.exe appendix_a.json ctap2.json)))
+(rule
+ (alias runtest)
+ (deps test.exe appendix_a.json ctap2.json)
+ (action
+  (run ./test.exe appendix_a.json ctap2.json)))
