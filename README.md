@@ -1,7 +1,7 @@
 OCaml native CBOR decoder/encoder
 =================================
 
-[![Build Status](https://travis-ci.com/ygrek/ocaml-cbor.svg?branch=master)](https://travis-ci.com/ygrek/ocaml-cbor)
+[![Build Status](https://github.com/ygrek/ocaml-cbor/actions/workflows/workflow.yml/badge.svg)](https://github.com/ygrek/ocaml-cbor/actions/workflows/workflow.yml)
 
 References
 ----------
