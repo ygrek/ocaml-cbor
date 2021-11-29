@@ -62,6 +62,23 @@ let to_hex s =
 
 end
 
+let need (s,i) n =
+  if n > String.length s || !i + n > String.length s then
+    fail "truncated: len %d pos %d need %d" (String.length s) !i n;
+  let j = !i in
+  i := !i + n;
+  j
+
+let get_byte (s,_ as r) = int_of_char @@ s.[need r 1]
+let get_n (s,_ as r) n f = f s @@ need r n
+let get_s (s,_ as r) n = String.sub s (need r n) n
+
+let get_additional byte1 = byte1 land 0b11111
+let is_indefinite byte1 = get_additional byte1 = 31
+
+let int64_max_int = Int64.of_int max_int
+let two_min_int32 = 2 * Int32.to_int Int32.min_int
+
 module Simple = struct
 
 type t =
@@ -98,23 +115,6 @@ let encode item =
   in
   write item;
   Buffer.contents b
-
-let need (s,i) n =
-  if n > String.length s || !i + n > String.length s then
-    fail "truncated: len %d pos %d need %d" (String.length s) !i n;
-  let j = !i in
-  i := !i + n;
-  j
-
-let get_byte (s,_ as r) = int_of_char @@ s.[need r 1]
-let get_n (s,_ as r) n f = f s @@ need r n
-let get_s (s,_ as r) n = String.sub s (need r n) n
-
-let get_additional byte1 = byte1 land 0b11111
-let is_indefinite byte1 = get_additional byte1 = 31
-
-let int64_max_int = Int64.of_int max_int
-let two_min_int32 = 2 * Int32.to_int Int32.min_int
 
 let extract_number byte1 r =
   match get_additional byte1 with
@@ -232,3 +232,136 @@ let to_diagnostic item =
   Buffer.contents b
 
 end (* Simple *)
+
+module Ctap2_canonical = struct
+  type t = [
+    | `Null
+    | `Undefined
+    | `Simple of int
+    | `Bool of bool
+    | `Int of int
+    | `Float of float
+    | `Bytes of string
+    | `Text of string
+    | `Array of t list
+    | `Map of (t * t) list
+  ]
+
+  exception Noncanonical of string
+  let noncanonical fmt = ksprintf (fun s -> raise (Noncanonical s))
+      ("noncanonical CTAP2 CBOR: " ^^ fmt)
+
+  let extract_number byte1 r =
+    let guard_min min n = if n < min
+      then noncanonical "non-compact number encoding: %d < %d" n min
+      else n
+    in
+    match get_additional byte1 with
+    | n when n < 24 -> n
+    | 24 -> guard_min 24 @@ get_byte r
+    | 25 -> guard_min 256 @@ get_n r 2 SE.get_uint16
+    | 26 ->
+      let n = guard_min (256*256) @@ Int32.to_int @@ get_n r 4 SE.get_int32 in
+      if n < 0 then n - two_min_int32 else n
+    | 27 ->
+      let n = get_n r 8 SE.get_int64 in
+      if n > int64_max_int || n < 0L then fail "extract_number: %Lu" n;
+      if Int64.compare n 0x1_0000_0000L < 0
+      then noncanonical "non-compact number encoding: %Ld < %Ld" n 0x1_0000_0000L;
+      Int64.to_int n
+    | n -> fail "bad additional %d" n
+
+  let monotonic s s' =
+    let major_typ s = int_of_char s.[0] lsr 5 in
+    let get_number s = match get_additional (int_of_char s.[0]) with
+      | n when n < 24 -> 1, Int64.of_int n
+      | 24 -> 2, Int64.of_int (int_of_char s.[1])
+      | 25 -> 3, Int64.of_int (SE.get_uint16 s 1)
+      | 26 -> 5, Int64.logand 0xFFFFFFFFL (Int64.of_int32 (SE.get_int32 s 1))
+      | 27 -> 9, SE.get_int64 s 1
+      | _ -> assert false
+    in
+    major_typ s < major_typ s' ||
+    major_typ s = major_typ s' &&
+    let off, n = get_number s and _, n' = get_number s' in
+    Int64.unsigned_compare n n' < 0 ||
+    Int64.unsigned_compare n n' = 0 &&
+    begin
+      List.mem (major_typ s) [2; 3; 4; 5] &&
+      let len = Int64.to_int n in
+      String.sub s off len < String.sub s' off len
+    end
+
+  exception Break
+
+  let extract_list byte1 r f =
+    if is_indefinite byte1 then
+      noncanonical "indefinite length array or map"
+    else
+      let n = extract_number byte1 r in Array.to_list @@ Array.init n (fun _ -> f r)
+
+  let rec extract_pair ((s, i) as r) =
+    let start = !i in
+    let a = extract r in
+    let finish = !i in
+    let raw = String.sub s start (finish - start) in
+    let b = try extract r with Break -> fail "extract_pair: unexpected break" in
+    raw, (a,b)
+  and extract_map byte1 r =
+    let kvs = extract_list byte1 r extract_pair in
+    let _, kvs =
+      List.fold_right (fun (curr, kv) (next, acc) ->
+          match next with
+          | None -> (Some curr, kv :: acc)
+          | Some next ->
+            if not (monotonic curr next) then noncanonical "unsorted map";
+            (Some curr, kv :: acc))
+        kvs (None, [])
+    in
+    kvs
+  and extract_string byte1 r =
+    if is_indefinite byte1 then
+      noncanonical "indefinite length string"
+    else
+      let n = extract_number byte1 r in get_s r n
+  and extract r =
+    let byte1 = get_byte r in
+    match byte1 lsr 5 with
+    | 0 -> `Int (extract_number byte1 r)
+    | 1 -> `Int (-1 - extract_number byte1 r)
+    | 2 -> `Bytes (extract_string byte1 r)
+    | 3 -> `Text (extract_string byte1 r)
+    | 4 -> `Array (extract_list byte1 r extract)
+    | 5 -> `Map (extract_map byte1 r)
+    | 6 -> noncanonical "tagged value"
+    | 7 ->
+      begin match get_additional byte1 with
+        | n when n < 20 -> `Simple n
+        | 20 -> `Bool false
+        | 21 -> `Bool true
+        | 22 -> `Null
+        | 23 -> `Undefined
+        | 24 -> `Simple (get_byte r)
+        | 25 -> `Float (get_n r 2 Simple.get_float16)
+        | 26 -> `Float (get_n r 4 SE.get_float)
+        | 27 -> `Float (get_n r 8 SE.get_double)
+        | 31 -> raise Break
+        | a -> fail "extract: (7,%d)" a
+      end
+    | _ -> assert false
+
+  let decode_partial s =
+    let i = ref 0 in
+    let x = try extract (s,i) with Break -> fail "decode: unexpected break" in
+    x, String.sub s !i (String.length s - !i)
+
+  let decode s : t =
+    let x, rest = decode_partial s in
+    if rest = "" then x
+    else fail "decode: extra data: len %d pos %d" (String.length s) (String.length s - String.length rest)
+
+  let rec to_simple = function
+    | `Null | `Undefined | `Simple _ | `Bool _ | `Int _ | `Float _ | `Bytes _ | `Text _ as v -> v
+    | `Array xs -> `Array (List.map to_simple xs)
+    | `Map kvs -> `Map (List.map (fun (k, v) -> to_simple k, to_simple v) kvs)
+end

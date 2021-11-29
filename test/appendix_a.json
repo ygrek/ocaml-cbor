@@ -69,6 +69,7 @@
     "cbor": "wkkBAAAAAAAAAAA=",
     "hex": "c249010000000000000000",
     "roundtrip": true,
+    "noncanonical": true,
     "decoded": 18446744073709551616
   },
   {
@@ -81,6 +82,7 @@
     "cbor": "w0kBAAAAAAAAAAA=",
     "hex": "c349010000000000000000",
     "roundtrip": true,
+    "noncanonical": true,
     "decoded": -18446744073709551617
   },
   {
@@ -285,36 +287,42 @@
     "cbor": "wHQyMDEzLTAzLTIxVDIwOjA0OjAwWg==",
     "hex": "c074323031332d30332d32315432303a30343a30305a",
     "roundtrip": true,
+    "noncanonical": true,
     "diagnostic": "0(\"2013-03-21T20:04:00Z\")"
   },
   {
     "cbor": "wRpRS2ew",
     "hex": "c11a514b67b0",
     "roundtrip": true,
+    "noncanonical": true,
     "diagnostic": "1(1363896240)"
   },
   {
     "cbor": "wftB1FLZ7CAAAA==",
     "hex": "c1fb41d452d9ec200000",
     "roundtrip": true,
+    "noncanonical": true,
     "diagnostic": "1(1363896240.5)"
   },
   {
     "cbor": "10QBAgME",
     "hex": "d74401020304",
     "roundtrip": true,
+    "noncanonical": true,
     "diagnostic": "23(h'01020304')"
   },
   {
     "cbor": "2BhFZElFVEY=",
     "hex": "d818456449455446",
     "roundtrip": true,
+    "noncanonical": true,
     "diagnostic": "24(h'6449455446')"
   },
   {
     "cbor": "2CB2aHR0cDovL3d3dy5leGFtcGxlLmNvbQ==",
     "hex": "d82076687474703a2f2f7777772e6578616d706c652e636f6d",
     "roundtrip": true,
+    "noncanonical": true,
     "diagnostic": "32(\"http://www.example.com\")"
   },
   {
@@ -489,18 +497,21 @@
     "cbor": "X0IBAkMDBAX/",
     "hex": "5f42010243030405ff",
     "roundtrip": false,
+    "noncanonical": true,
     "diagnostic": "(_ h'0102', h'030405')"
   },
   {
     "cbor": "f2VzdHJlYWRtaW5n/w==",
     "hex": "7f657374726561646d696e67ff",
     "roundtrip": false,
+    "noncanonical": true,
     "decoded": "streaming"
   },
   {
     "cbor": "n/8=",
     "hex": "9fff",
     "roundtrip": false,
+    "noncanonical": true,
     "decoded": [
 
     ]
@@ -509,6 +520,7 @@
     "cbor": "nwGCAgOfBAX//w==",
     "hex": "9f018202039f0405ffff",
     "roundtrip": false,
+    "noncanonical": true,
     "decoded": [
       1,
       [
@@ -525,6 +537,7 @@
     "cbor": "nwGCAgOCBAX/",
     "hex": "9f01820203820405ff",
     "roundtrip": false,
+    "noncanonical": true,
     "decoded": [
       1,
       [
@@ -541,6 +554,7 @@
     "cbor": "gwGCAgOfBAX/",
     "hex": "83018202039f0405ff",
     "roundtrip": false,
+    "noncanonical": true,
     "decoded": [
       1,
       [
@@ -557,6 +571,7 @@
     "cbor": "gwGfAgP/ggQF",
     "hex": "83019f0203ff820405",
     "roundtrip": false,
+    "noncanonical": true,
     "decoded": [
       1,
       [
@@ -573,6 +588,7 @@
     "cbor": "nwECAwQFBgcICQoLDA0ODxAREhMUFRYXGBgYGf8=",
     "hex": "9f0102030405060708090a0b0c0d0e0f101112131415161718181819ff",
     "roundtrip": false,
+    "noncanonical": true,
     "decoded": [
       1,
       2,
@@ -605,6 +621,7 @@
     "cbor": "v2FhAWFinwID//8=",
     "hex": "bf61610161629f0203ffff",
     "roundtrip": false,
+    "noncanonical": true,
     "decoded": {
       "a": 1,
       "b": [
@@ -617,6 +634,7 @@
     "cbor": "gmFhv2FiYWP/",
     "hex": "826161bf61626163ff",
     "roundtrip": false,
+    "noncanonical": true,
     "decoded": [
       "a",
       {
@@ -628,9 +646,75 @@
     "cbor": "v2NGdW71Y0FtdCH/",
     "hex": "bf6346756ef563416d7421ff",
     "roundtrip": false,
+    "noncanonical": true,
     "decoded": {
       "Fun": true,
       "Amt": -2
     }
+  },
+  {
+    "cbor": "pGJya/VidXD1ZHBsYXT0aWNsaWVudFBpbvU=",
+    "hex": "a462726bf5627570f564706c6174f469636c69656e7450696ef5",
+    "roundtrip": false,
+    "decoded": {
+      "rk": true,
+      "up": true,
+      "plat": false,
+      "clientPin": true
+    }
+  },
+  {
+    "cbor": "pGRwbGF09GJya/VpY2xpZW50UGlu9WJ1cPU=",
+    "hex": "a464706c6174f462726bf569636c69656e7450696ef5627570f5",
+    "roundtrip": false,
+    "noncanonical": true,
+    "decoded": {
+      "plat": false,
+      "rk": true,
+      "clientPin": true,
+      "up": true
+    }
+  },
+  {
+    "cbor": "GAE=",
+    "hex": "1801",
+    "roundtrip": false,
+    "noncanonical": true,
+    "decoded": 1
+  },
+  {
+    "cbor": "GQAB",
+    "hex": "190001",
+    "roundtrip": false,
+    "noncanonical": true,
+    "decoded": 1
+  },
+  {
+    "cbor": "GgAAAAE=",
+    "hex": "1a00000001",
+    "roundtrip": false,
+    "noncanonical": true,
+    "decoded": 1
+  },
+  {
+    "cbor": "GwAAAAAAAAAB",
+    "hex": "1b0000000000000001",
+    "roundtrip": false,
+    "noncanonical": true,
+    "decoded": 1
+  },
+  {
+    "cbor": "OAA=",
+    "hex": "3800",
+    "roundtrip": false,
+    "noncanonical": true,
+    "decoded": -1
+  },
+  {
+    "cbor": "OwAAAAAAAQRp",
+    "hex": "3B0000000000010469",
+    "roundtrip": false,
+    "noncanonical": true,
+    "decoded": -66666
   }
 ]

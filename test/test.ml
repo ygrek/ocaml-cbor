@@ -4,6 +4,7 @@ type test = {
   cbor : string;
   roundtrip : bool;
   result : result;
+  noncanonical : bool;
 }
 
 let (@@) f x = f x
@@ -35,7 +36,11 @@ let read file =
         with Not_found -> 
           Decoded (List.assoc "decoded" a)
       in
-      { cbor; roundtrip; result }
+      let noncanonical = try
+          Util.to_bool @@ List.assoc "noncanonical" a
+        with Not_found -> false
+      in
+      { cbor; roundtrip; result; noncanonical }
     | _ -> assert false
     end
 
@@ -75,7 +80,24 @@ let () =
           if json <> json' then fail "expected %s, got %s, aka %s"
             (Yojson.Basic.to_string json) (Yojson.Basic.to_string json') diag
         in
-        incr ok
+        if test.noncanonical then
+          try let cbor = CBOR.Ctap2_canonical.decode test.cbor in
+            fail "expected reject noncanonical CBOR, got %s"
+              (CBOR.Simple.to_diagnostic (CBOR.Ctap2_canonical.to_simple cbor))
+          with CBOR.Ctap2_canonical.Noncanonical _ -> incr ok
+        else
+          let cbor = CBOR.Ctap2_canonical.decode test.cbor in
+          let diag = CBOR.Simple.to_diagnostic (CBOR.Ctap2_canonical.to_simple cbor) in
+          let () = match test.result with
+            | Diagnostic s ->
+              if s <> diag then fail "expected %s, got %s" s diag
+            | Decoded json ->
+              let json' = json_of_cbor (CBOR.Ctap2_canonical.to_simple cbor) in
+              if json <> json' then fail "expected %s, got %s, aka %s"
+                  (Yojson.Basic.to_string json) (Yojson.Basic.to_string json') diag
+          in
+          incr ok
+
       with exn ->
         let ignore = List.mem !nr [10; 11; 12; 13; 71] in
         eprintfn "%s test %d: %s"
