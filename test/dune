@@ -4,5 +4,5 @@
 
 (alias
   (name runtest)
-  (deps test.exe appendix_a.json)
-  (action (run ./test.exe appendix_a.json)))
+  (deps test.exe appendix_a.json ctap2.json)
+  (action (run ./test.exe appendix_a.json ctap2.json)))

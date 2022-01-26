@@ -57,9 +57,9 @@ let rec json_of_cbor : CBOR.Simple.t -> Yojson.Basic.t = function
 | `Tag (t, v) -> `String (Printf.sprintf "%d(%s)" t
                             (Yojson.Basic.to_string (json_of_cbor v)))
 
-let () =
-  match List.tl @@ Array.to_list Sys.argv with
-  | file::[] ->
+let rec main total_failed files =
+  match files with
+  | file::files ->
     eprintfn "I: running tests from %s" file;
     let tests = read file in
     eprintfn "I: total tests = %d" (List.length tests);
@@ -67,7 +67,13 @@ let () =
     let failed = ref 0 in
     let ignored = ref 0 in
     let nr = ref (-1) in
-    tests |> List.iter begin fun test ->
+    let noncanonical = function
+      | 11 | 13 | 47 | 48 | 49 | 50 | 51 | 52
+      | 71 | 72 | 73 | 74 | 75 | 76 | 77 | 78 | 79 | 80 | 81 ->
+        file = "appendix_a.json" (* XXX: ugly hack *)
+      | _ -> false
+    in
+    tests |> List.iteri begin fun idx test ->
       try
         incr nr;
         let cbor = CBOR.Simple.decode test.cbor in
@@ -80,7 +86,7 @@ let () =
           if json <> json' then fail "expected %s, got %s, aka %s"
             (Yojson.Basic.to_string json) (Yojson.Basic.to_string json') diag
         in
-        if test.noncanonical then
+        if test.noncanonical || noncanonical idx then
           try let cbor = CBOR.Ctap2_canonical.decode test.cbor in
             fail "expected reject noncanonical CBOR, got %s"
               (CBOR.Simple.to_diagnostic (CBOR.Ctap2_canonical.to_simple cbor))
@@ -99,13 +105,19 @@ let () =
           incr ok
 
       with exn ->
-        let ignore = List.mem !nr [10; 11; 12; 13; 71] in
+        let ignore = file = "appendix_a.json" (* also ugly hack *) && List.mem !nr [10; 11; 12; 13; 71] in
         eprintfn "%s test %d: %s"
           (if ignore then "W: ignoring" else "E:") !nr (match exn with Failure s -> s | _ -> Printexc.to_string exn);
         incr (if ignore then ignored else failed)
     end;
     eprintfn "I: finished. tests ok = %d failed = %d ignored = %d" !ok !failed !ignored;
-    exit (if !failed = 0 then 0 else 1)
-  | _ ->
+    main (total_failed + !failed) files
+  | [] ->
+    exit (if total_failed = 0 then 0 else 1)
+
+let () =
+  match List.tl @@ Array.to_list Sys.argv with
+  | _ :: _ as files -> main 0 files
+  | [] ->
     eprintfn "E: no test file given";
     exit 2
