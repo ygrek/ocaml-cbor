@@ -1,0 +1,67 @@
+[
+  {
+    "cbor": "pGJya/VidXD1ZHBsYXT0aWNsaWVudFBpbvU=",
+    "hex": "a462726bf5627570f564706c6174f469636c69656e7450696ef5",
+    "roundtrip": false,
+    "decoded": {
+      "rk": true,
+      "up": true,
+      "plat": false,
+      "clientPin": true
+    }
+  },
+  {
+    "cbor": "pGRwbGF09GJya/VpY2xpZW50UGlu9WJ1cPU=",
+    "hex": "a464706c6174f462726bf569636c69656e7450696ef5627570f5",
+    "roundtrip": false,
+    "noncanonical": true,
+    "decoded": {
+      "plat": false,
+      "rk": true,
+      "clientPin": true,
+      "up": true
+    }
+  },
+  {
+    "cbor": "GAE=",
+    "hex": "1801",
+    "roundtrip": false,
+    "noncanonical": true,
+    "decoded": 1
+  },
+  {
+    "cbor": "GQAB",
+    "hex": "190001",
+    "roundtrip": false,
+    "noncanonical": true,
+    "decoded": 1
+  },
+  {
+    "cbor": "GgAAAAE=",
+    "hex": "1a00000001",
+    "roundtrip": false,
+    "noncanonical": true,
+    "decoded": 1
+  },
+  {
+    "cbor": "GwAAAAAAAAAB",
+    "hex": "1b0000000000000001",
+    "roundtrip": false,
+    "noncanonical": true,
+    "decoded": 1
+  },
+  {
+    "cbor": "OAA=",
+    "hex": "3800",
+    "roundtrip": false,
+    "noncanonical": true,
+    "decoded": -1
+  },
+  {
+    "cbor": "OwAAAAAAAQRp",
+    "hex": "3B0000000000010469",
+    "roundtrip": false,
+    "noncanonical": true,
+    "decoded": -66666
+  }
+]
