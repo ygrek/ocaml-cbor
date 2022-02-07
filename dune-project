@@ -1,4 +1,4 @@
-(lang dune 2.9)
+(lang dune 2.7)
 
 (implicit_transitive_deps false)
 
