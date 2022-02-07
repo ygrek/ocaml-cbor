@@ -271,6 +271,10 @@ module Ctap2_canonical = struct
       Int64.to_int n
     | n -> fail "bad additional %d" n
 
+  let unsigned_compare n m =
+    let open Int64 in
+    compare (sub n min_int) (sub m min_int)
+
   let monotonic s s' =
     let major_typ s = int_of_char s.[0] lsr 5 in
     let get_number s = match get_additional (int_of_char s.[0]) with
@@ -284,8 +288,8 @@ module Ctap2_canonical = struct
     major_typ s < major_typ s' ||
     major_typ s = major_typ s' &&
     let off, n = get_number s and _, n' = get_number s' in
-    Int64.unsigned_compare n n' < 0 ||
-    Int64.unsigned_compare n n' = 0 &&
+    unsigned_compare n n' < 0 ||
+    unsigned_compare n n' = 0 &&
     begin
       List.mem (major_typ s) [2; 3; 4; 5] &&
       let len = Int64.to_int n in
