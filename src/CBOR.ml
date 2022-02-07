@@ -233,7 +233,7 @@ let to_diagnostic item =
 
 end (* Simple *)
 
-module Ctap2_canonical = struct
+module CTAP2_canonical = struct
   type t = [
     | `Null
     | `Undefined

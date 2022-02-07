@@ -1,3 +1,6 @@
+module CTAP2 = CBOR.CTAP2_canonical
+module Simple = CBOR.Simple
+
 type result = Decoded of Yojson.Basic.t | Diagnostic of string
 
 type test = {
@@ -44,7 +47,7 @@ let read file =
     | _ -> assert false
     end
 
-let rec json_of_cbor : CBOR.Simple.t -> Yojson.Basic.t = function
+let rec json_of_cbor : Simple.t -> Yojson.Basic.t = function
 | (`Null | `Bool _ | `Int _ | `Float _ as x) -> x
 | `Undefined | `Simple _ -> `Null
 | `Bytes x -> `String x
@@ -76,8 +79,8 @@ let rec main total_failed files =
     tests |> List.iteri begin fun idx test ->
       try
         incr nr;
-        let cbor = CBOR.Simple.decode test.cbor in
-        let diag = CBOR.Simple.to_diagnostic cbor in
+        let cbor = Simple.decode test.cbor in
+        let diag = Simple.to_diagnostic cbor in
         let () = match test.result with
         | Diagnostic s ->
           if s <> diag then fail "expected %s, got %s" s diag
@@ -87,18 +90,18 @@ let rec main total_failed files =
             (Yojson.Basic.to_string json) (Yojson.Basic.to_string json') diag
         in
         if test.noncanonical || noncanonical idx then
-          try let cbor = CBOR.Ctap2_canonical.decode test.cbor in
+          try let cbor = CTAP2.decode test.cbor in
             fail "expected reject noncanonical CBOR, got %s"
-              (CBOR.Simple.to_diagnostic (CBOR.Ctap2_canonical.to_simple cbor))
-          with CBOR.Ctap2_canonical.Noncanonical _ -> incr ok
+              (Simple.to_diagnostic (CTAP2.to_simple cbor))
+          with CTAP2.Noncanonical _ -> incr ok
         else
-          let cbor = CBOR.Ctap2_canonical.decode test.cbor in
-          let diag = CBOR.Simple.to_diagnostic (CBOR.Ctap2_canonical.to_simple cbor) in
+          let cbor = CTAP2.decode test.cbor in
+          let diag = Simple.to_diagnostic (CTAP2.to_simple cbor) in
           let () = match test.result with
             | Diagnostic s ->
               if s <> diag then fail "expected %s, got %s" s diag
             | Decoded json ->
-              let json' = json_of_cbor (CBOR.Ctap2_canonical.to_simple cbor) in
+              let json' = json_of_cbor (CTAP2.to_simple cbor) in
               if json <> json' then fail "expected %s, got %s, aka %s"
                   (Yojson.Basic.to_string json) (Yojson.Basic.to_string json') diag
           in

@@ -30,7 +30,7 @@ end
 (**
   {{: https://fidoalliance.org/specs/fido-v2.0-ps-20190130/fido-client-to-authenticator-protocol-v2.0-ps-20190130.html#ctap2-canonical-cbor-encoding-form}CTAP2} decoder
 *)
-module Ctap2_canonical : sig
+module CTAP2_canonical : sig
   type t = [
     | `Null
     | `Undefined
