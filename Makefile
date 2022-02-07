@@ -1,4 +1,4 @@
-.PHONY: build test clean install
+.PHONY: build test clean install doc
 
 all: build test
 
@@ -13,6 +13,9 @@ clean:
 
 install:
 	dune install
+
+doc:
+	dune build @doc
 
 VERSION=0.5
 NAME=ocaml-cbor-$(VERSION)
